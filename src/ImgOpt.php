@@ -147,7 +147,7 @@ class ImgOpt extends Widget
 	/**
 	 * @var bool set to TRUE to recreate the WebP file again (optional)
 	 */
-	public $recreate = false;
+	public $recreate = true;
 
 	/**
 	 * @var bool set to TRUE to recreate *ALL* of the WebP files again (optional)
@@ -182,7 +182,9 @@ class ImgOpt extends Widget
 
 		// build full path to the image (relative to the webroot)
 		$web_root = Yii::getAlias('@webroot');
-		$img_full_path = $web_root . $img;
+		$img_full_path = $web_root . str_replace("imagex/","app_asset/",str_replace(Yii::$app->request->baseUrl."/","/",$img));
+
+		//print_r($img_full_path);
 
 		// check if the source image exist
 		if (file_exists($img_full_path) === false)
@@ -210,6 +212,8 @@ class ImgOpt extends Widget
 
 		$webp_short_path = $short_file_info["dirname"] . "/" . $webp_filename_with_extension;
 		$webp_full_path = $file_info["dirname"]  . "/" . $webp_filename_with_extension;
+
+		
 
 		// if the WEBP file already exists check if we want to re-create it
 		if ($recreate === false && file_exists($webp_full_path))
@@ -247,6 +251,8 @@ class ImgOpt extends Widget
 		{
 			$img = imagecreatefromjpeg($img_full_path);
 			imagepalettetotruecolor($img);
+
+			//echo $ext;
 		}
 
 		// start with 100 quality
@@ -257,8 +263,11 @@ class ImgOpt extends Widget
 		do
 		{
 			// generate output WEBP file
-			imagewebp($img, $webp_full_path, $quality);
-
+			$wp = imagewebp($img, $webp_full_path, $quality);
+			// if(!$wp){
+			// 	echo "GAGAL";
+			// }
+			//print_r($img);
 			// decrease quality
 			$quality -= 5;
 
@@ -278,15 +287,17 @@ class ImgOpt extends Widget
 			touch($webp_full_path, $img_modification_time);
 		}
 
-
+		//print_r($webp_short_path);
 		// if the final WEBP image is bigger than the original file
 		// don't use it (use the original only)
 		if (filesize($webp_full_path) >= $original_file_size)
 		{
 			return null;
 		}
-
+		
 		return $webp_short_path;
+
+		
 	}
 
 
@@ -319,7 +330,7 @@ class ImgOpt extends Widget
 	public function run()
 	{
 		// our unoptimized image (include all the possible attributes)
-		$img = Html::img($this->src, [
+		$img = Html::img(str_replace("app_asset/","imagex/",$this->src), [
 
 			"class" => $this->css,
 			"style" => $this->style,
@@ -330,12 +341,14 @@ class ImgOpt extends Widget
 			"itemprop" => $this->itemprop
 		]);
 
+		//print_r($this->_webp);
+
 		// was WebP image generated from our unoptimized image?
 		if ($this->_webp)
 		{
 			// include it within <picture> tag
 			$html = "<picture>";
-			$html .= Html::tag("source", [], ["srcset" => $this->_webp, "type" => "image/webp"]);
+			$html .= Html::tag("source", [], ["srcset" => str_replace("app_asset/","imagex/",$this->_webp), "type" => "image/webp"]);
 
 			// fallback image (unoptimized)
 			$html .= $img;
